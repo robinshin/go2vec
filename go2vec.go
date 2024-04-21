@@ -23,8 +23,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/gonum/blas"
-	cblas "github.com/gonum/blas/cgo"
+	"gonum.org/v1/gonum/blas"
+	"gonum.org/v1/gonum/blas/gonum"
 )
 
 // IterFunc is a function for iterating over word embeddings. The function
@@ -78,7 +78,7 @@ type Embeddings struct {
 // should be used in conjunction with 'Put' to populate the embeddings.
 func NewEmbeddings(embedSize int) *Embeddings {
 	return &Embeddings{
-		blas:      cblas.Implementation{},
+		blas:      gonum.Implementation{},
 		matrix:    make([]float32, 0),
 		embedSize: embedSize,
 		indices:   make(map[string]int),
@@ -120,7 +120,7 @@ func ReadWord2VecBinary(r *bufio.Reader, normalize bool) (*Embeddings, error) {
 	}
 
 	return &Embeddings{
-		blas:      cblas.Implementation{},
+		blas:      gonum.Implementation{},
 		matrix:    matrix,
 		embedSize: int(vSize),
 		indices:   indices,
