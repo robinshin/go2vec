@@ -286,31 +286,37 @@ func (e *Embeddings) WordIdx(word string) (int, bool) {
 	return 0, false
 }
 
-func (e *Embeddings) similarity(embed []float32, skips map[int]interface{}, limit int) ([]WordSimilarity, error) {
-	dps := make([]float32, e.Size())
-	e.blas.Sgemv(blas.NoTrans, int(e.Size()), int(e.EmbeddingSize()),
-		1, e.matrix, int(e.EmbeddingSize()), embed, 1, 0, dps, 1)
+func CosineSimilarity(vec1, vec2 []float32) float64 {
+	var dotProduct float32
+	var normA, normB float32
+	for i, v := range vec1 {
+		dotProduct += v * vec2[i]
+		normA += v * v
+		normB += vec2[i] * vec2[i]
+	}
+	return float64(dotProduct) / (math.Sqrt(float64(normA)) * math.Sqrt(float64(normB)))
+}
 
-	results := make(similarityHeap, 0, minInt(limit, e.Size()))
+func (e *Embeddings) similarity(embed []float32, skips map[int]interface{}, limit int) ([]WordSimilarity, error) {
+	results := make(similarityHeap, 0, minInt(limit, len(e.indices)))
 	heap.Init(&results)
 
-	for idx, sim := range dps {
-		// Skip words in the skip set.
-		if _, ok := skips[idx]; ok {
+	for word, index := range e.indices {
+		if _, ok := skips[index]; ok {
 			continue
 		}
+		currentEmbed := e.lookupIdx(index)
+		sim := float32(CosineSimilarity(embed, currentEmbed))
 
 		if results.Len() < limit {
-			heap.Push(&results, WordSimilarity{e.words[idx], sim})
+			heap.Push(&results, WordSimilarity{Word: word, Similarity: sim})
 		} else if results[0].Similarity < sim {
 			heap.Pop(&results)
-			heap.Push(&results, WordSimilarity{e.words[idx], sim})
+			heap.Push(&results, WordSimilarity{Word: word, Similarity: sim})
 		}
 	}
 
-	// Todo: heapsort.
 	sort.Sort(sort.Reverse(results))
-
 	return results, nil
 }
 
